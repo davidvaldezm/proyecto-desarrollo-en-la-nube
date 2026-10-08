@@ -53,6 +53,13 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: "1.10.5"
-      - run: terraform fmt -check -recursive
+      - name: terraform fmt
+        # Si falla, el diff aparece como anotación en el PR.
+        run: |
+          if ! terraform fmt -check -recursive -diff > fmt.diff 2>&1; then
+            diff=$(sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' fmt.diff)
+            echo "::error title=terraform fmt::Ejecuta 'terraform fmt -recursive' en infra/%0A${diff}"
+            exit 1
+          fi
       - run: terraform init -backend=false -input=false
       - run: terraform validate
