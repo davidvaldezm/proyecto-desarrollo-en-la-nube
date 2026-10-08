@@ -20,7 +20,7 @@ Muchos eventos se organizan con hojas de cálculo, transferencias y listas impre
 
 ![Arquitectura](docs/arquitectura.png)
 
-**Servicios de AWS:** Lambda, API Gateway, DynamoDB, S3, SQS, SNS y CloudWatch (más IAM, Secrets Manager y EventBridge Scheduler).
+**Servicios de AWS:** Lambda, API Gateway, DynamoDB, S3, SQS, SNS y CloudWatch (más IAM, Secrets Manager y EventBridge).
 
 **Stack:** frontend React + Vite (sitio estático en S3) · backend Python 3.12 en Lambda · infraestructura con Terraform · CI/CD con GitHub Actions (pruebas con pytest) · monitoreo con CloudWatch (5 métricas, 2 alarmas, 1 dashboard).
 
@@ -32,17 +32,71 @@ Muchos eventos se organizan con hojas de cálculo, transferencias y listas impre
 | Vittorio Catino | Flujo 2 (check-in con QR) + CI/CD |
 | Juan Pablo Gutiérrez | Flujo 3 (recordatorios y reporte) + Monitoreo |
 
-## Estructura planeada del repositorio
+## Estructura del repositorio
 
 ```
-frontend/         # React + Vite
-backend/          # Lambdas en Python (un módulo por flujo)
-  tests/          # pruebas unitarias (pytest)
-infra/            # Terraform
-.github/workflows # pipeline de CI/CD
-docs/             # diagramas y reportes
+backend/
+  src/paseqr/common/     # utilidades compartidas: respuestas HTTP, validación, DynamoDB
+  src/paseqr/handlers/   # una Lambda por archivo (eventos, compras, generar_boleto, checkin, recordatorios)
+  tests/                 # pruebas unitarias con pytest + moto (AWS simulado)
+frontend/                # React + Vite, se publica como sitio estático en S3
+infra/                   # Terraform: DynamoDB, S3, SQS, SNS, Secrets Manager, Lambda, API Gateway, EventBridge
+scripts/                 # bootstrap, build y deploy
+.github/workflows/       # CI (pruebas, build, terraform validate) y deploy a AWS
+docs/                    # diagramas y reportes
 ```
 
-## Estado
+## Estado actual (Fase 2)
 
-Fase 1 — Planteamiento del proyecto (septiembre 2026). Las instrucciones de despliegue se agregarán en la Fase 2.
+| Componente | Estado | Responsable |
+|------------|--------|-------------|
+| Infraestructura base (Terraform) | Lista | Equipo |
+| API `GET/POST /eventos` + página para crear y listar eventos | Lista | Equipo |
+| Flujo 1 — `POST /compras`, cola SQS, PDF con QR, "Mis boletos" | Pendiente (responde 501) | David |
+| Flujo 2 — `POST /checkin`, firma HMAC, escáner QR | Pendiente (responde 501) | Vittorio |
+| Flujo 3 — recordatorios y reporte CSV | Pendiente (Lambda programada sin lógica) | Juan Pablo |
+| CI/CD con GitHub Actions | Pruebas y build listos; deploy requiere los secrets de AWS | Vittorio |
+| Monitoreo (5 métricas, 2 alarmas, dashboard) | Pendiente (Fase 3) | Juan Pablo |
+
+Los archivos pendientes tienen en su docstring el contrato de entrada/salida y los pasos a implementar.
+
+## Cómo desplegar
+
+### Requisitos
+
+- Cuenta de **AWS Academy (Learner Lab)** iniciada. Las Lambdas usan el rol existente `LabRole`, porque en Academy no se pueden crear roles.
+- `aws` CLI, Terraform ≥ 1.10, Python 3.12 y Node 20.
+
+### Desde tu computadora
+
+1. En el Learner Lab: **Start Lab → AWS Details → AWS CLI → Show** y copia el contenido a `~/.aws/credentials`. Estas credenciales vencen cada ~4 horas.
+2. Ejecuta:
+
+```bash
+./scripts/deploy.sh            # crea el bucket de estado, empaqueta, aplica Terraform y sube el frontend
+```
+
+Al final se imprimen la URL de la API y la del sitio. Para borrar todo: `./scripts/destroy.sh`.
+
+El estado de Terraform se guarda en S3 (`paseqr-tfstate-<cuenta>`), así que GitHub Actions y los tres integrantes comparten la misma infraestructura.
+
+### Con GitHub Actions
+
+- **CI** (`ci.yml`): en cada Pull Request y en cada push a una rama corre pytest, el build del frontend y `terraform fmt`/`validate`.
+- **Deploy** (`deploy.yml`): en cada push a `main` corre las pruebas y ejecuta `scripts/deploy.sh`.
+
+Al iniciar el Learner Lab hay que actualizar en **Settings → Secrets and variables → Actions** los secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`, porque cambian en cada sesión.
+
+### Desarrollo local
+
+```bash
+cd backend && pip install -r requirements-dev.txt && pytest      # pruebas
+cd frontend && npm install && cp .env.example .env && npm run dev  # frontend contra la API desplegada
+```
+
+## Forma de trabajo
+
+1. Crea una rama por tarea: `git checkout -b flujo1/compra`.
+2. Haz commits pequeños y abre un Pull Request hacia `main`.
+3. CI tiene que pasar y otro integrante revisa antes de hacer merge.
+4. El merge a `main` despliega automáticamente.

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+backend/build/
+
+# Node
+node_modules/
+frontend/dist/
+.env
+.env.local
+
+# Terraform
+.terraform/
+infra/.build/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Sistema
+.DS_Store
+Thumbs.db

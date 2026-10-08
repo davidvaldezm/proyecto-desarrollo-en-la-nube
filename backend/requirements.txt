@@ -1,0 +1,2 @@
+# Dependencias de las Lambdas (boto3 ya viene en el runtime de AWS)
+# Flujo 1 agregará: qrcode y reportlab
