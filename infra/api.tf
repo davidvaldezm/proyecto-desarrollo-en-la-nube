@@ -46,6 +46,7 @@ locals {
     "POST /eventos"            = "eventos"
     "GET /eventos/{evento_id}" = "eventos"
     "POST /compras"            = "comprar-boleto"
+    "GET /boletos"             = "comprar-boleto"
     "POST /checkin"            = "check-in"
   }
   lambdas_api = toset(values(local.rutas))

@@ -13,6 +13,7 @@ locals {
     COLA_EMISION_URL      = aws_sqs_queue.emision.url
     TOPICO_NOTIFICACIONES = aws_sns_topic.notificaciones.arn
     SECRETO_QR_ARN        = aws_secretsmanager_secret.qr_key.arn
+    FRONTEND_URL          = local.frontend_url
     STAGE                 = var.stage
   }
 

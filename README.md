@@ -50,15 +50,26 @@ docs/                    # diagramas y reportes
 
 | Componente | Estado | Responsable |
 |------------|--------|-------------|
-| Infraestructura base (Terraform) | Lista | Equipo |
-| API `GET/POST /eventos` + página para crear y listar eventos | Lista | Equipo |
-| Flujo 1 — `POST /compras`, cola SQS, PDF con QR, "Mis boletos" | Pendiente (responde 501) | David |
-| Flujo 2 — `POST /checkin`, firma HMAC, escáner QR | Pendiente (responde 501) | Vittorio |
-| Flujo 3 — recordatorios y reporte CSV | Pendiente (Lambda programada sin lógica) | Juan Pablo |
-| CI/CD con GitHub Actions | Pruebas y build listos; deploy requiere los secrets de AWS | Vittorio |
-| Monitoreo (5 métricas, 2 alarmas, dashboard) | Pendiente (Fase 3) | Juan Pablo |
+| Infraestructura (Terraform): DynamoDB, S3, SQS+DLQ, SNS, Secrets Manager, 5 Lambdas, API Gateway, EventBridge, CloudFront | Lista | Equipo |
+| Eventos: `GET/POST /eventos`, página para crear y listar | Lista | Equipo |
+| Flujo 1: `POST /compras` (transacción sin sobreventa + idempotencia), cola SQS, PDF con QR firmado, `GET /boletos` y "Mis boletos" | Listo | David |
+| Flujo 2: `POST /checkin` (firma HMAC + update condicional) y escáner QR con cámara | Listo | Vittorio |
+| Flujo 3: recordatorio 24 h antes y reporte CSV de asistencia (EventBridge cada hora) | Listo | Juan Pablo |
+| CI/CD con GitHub Actions (pytest, build, terraform validate, deploy a `main`) | Listo | Vittorio |
+| Métricas personalizadas (EMF): BoletosVendidos, BoletosEmitidos, CheckInsValidos/Rechazados, ComprasRechazadasPorCupo | Listo | Juan Pablo |
+| Alarmas y dashboard de CloudWatch | Pendiente (Fase 3) | Juan Pablo |
+| Pruebas de carga con compras concurrentes contra AWS | Pendiente | David |
 
-Los archivos pendientes tienen en su docstring el contrato de entrada/salida y los pasos a implementar.
+### API
+
+| Método y ruta | Lambda | Descripción |
+|---------------|--------|-------------|
+| `GET /eventos` · `GET /eventos/{id}` · `POST /eventos` | eventos | Listar, detalle y crear evento |
+| `POST /compras` | comprar-boleto | `{compra_id, evento_id, nombre, email, cantidad}` → 202 con boletos `PENDIENTE`, 409 si no hay cupo |
+| `GET /boletos?email=` | comprar-boleto | Boletos del comprador con URL de descarga (1 h) |
+| `POST /checkin` | check-in | `{evento_id, pin_staff, qr}` → `VALIDO`, `YA_USADO`, `INVALIDO`, `OTRO_EVENTO` |
+| SQS `emision` | generar-boleto | Genera el PDF con QR, lo guarda en S3 y avisa por SNS |
+| EventBridge `rate(1 hour)` | recordatorios | Recordatorios y reportes. Manual: `{"accion": "reporte", "evento_id": "..."}` |
 
 ## Cómo desplegar
 

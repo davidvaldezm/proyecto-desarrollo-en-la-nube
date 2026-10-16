@@ -32,3 +32,9 @@ variable "alert_email" {
   type        = string
   default     = ""
 }
+
+variable "habilitar_cloudfront" {
+  description = "Sirve el frontend por HTTPS con CloudFront (necesario para usar la cámara en el check-in)"
+  type        = bool
+  default     = true
+}

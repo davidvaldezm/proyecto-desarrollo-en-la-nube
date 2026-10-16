@@ -4,7 +4,12 @@ output "api_url" {
 }
 
 output "frontend_url" {
-  description = "URL del sitio web"
+  description = "URL del sitio web (HTTPS si CloudFront está habilitado)"
+  value       = local.frontend_url
+}
+
+output "frontend_s3_url" {
+  description = "URL directa del bucket (HTTP)"
   value       = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
 }
 

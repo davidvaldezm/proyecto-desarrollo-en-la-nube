@@ -63,4 +63,16 @@ jobs:
           terraform_version: "1.10.5"
           terraform_wrapper: false
 
-      - run: ./scripts/deploy.sh dev
+      - name: Desplegar
+        run: |
+          set -o pipefail
+          ./scripts/deploy.sh dev 2>&1 | tee deploy.log
+
+      # Si algo falla, las últimas líneas del log aparecen como anotación en el resumen del run.
+      - name: Resumen del error
+        if: failure()
+        run: |
+          [ -f deploy.log ] || exit 0
+          tail -n 60 deploy.log | sed 's/\x1b\[[0-9;]*m//g' > tail.log
+          msg=$(sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g' tail.log)
+          echo "::error title=Deploy falló::${msg}"
