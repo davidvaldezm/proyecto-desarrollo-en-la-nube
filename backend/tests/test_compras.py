@@ -122,3 +122,32 @@ def test_mis_boletos_con_url_de_descarga(aws):
     boletos = json.loads(resp["body"])["boletos"]
     assert len(boletos) == 2
     assert all(b["estado"] == "EMITIDO" and b["pdf_url"].startswith("https://") for b in boletos)
+
+
+def test_conflicto_de_transaccion_se_reintenta(aws, monkeypatch):
+    """Con muchas compras simultáneas DynamoDB puede cancelar con TransactionConflict;
+    la Lambda reintenta en lugar de responder 500."""
+    from botocore.exceptions import ClientError
+    from paseqr.common import aws as aws_mod
+
+    ev = crear_evento(cupo=5)
+    real = aws_mod.client
+    fallas = {"n": 2}
+
+    class ClienteConConflicto:
+        def __init__(self):
+            self._c = real("dynamodb")
+
+        def transact_write_items(self, **kw):
+            if fallas["n"] > 0:
+                fallas["n"] -= 1
+                raise ClientError({"Error": {"Code": "TransactionCanceledException", "Message": "conflict"},
+                                   "CancellationReasons": [{"Code": "TransactionConflict"}, {"Code": "None"}]},
+                                  "TransactWriteItems")
+            return self._c.transact_write_items(**kw)
+
+    monkeypatch.setattr(aws_mod, "client", lambda s: ClienteConConflicto() if s == "dynamodb" else real(s))
+    status, _ = comprar(ev["evento_id"])
+    assert status == 202 and fallas["n"] == 0
+    monkeypatch.setattr(aws_mod, "client", real)
+    assert vendidos(ev["evento_id"]) == 1

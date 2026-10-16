@@ -11,6 +11,8 @@ Evita la sobreventa y las compras duplicadas (ver Tarea 2):
 """
 import json
 import logging
+import random
+import time
 from datetime import datetime, timezone
 
 from boto3.dynamodb.conditions import Key
@@ -25,6 +27,7 @@ from paseqr.common.validation import Validador
 logger = logging.getLogger()
 UUID_RE = r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 MAX_POR_COMPRA = 4
+REINTENTOS_CONFLICTO = 5
 _ser = TypeSerializer()
 
 
@@ -95,22 +98,35 @@ def comprar(event):
             }
         })
 
-    try:
-        aws.client("dynamodb").transact_write_items(TransactItems=acciones, ClientRequestToken=compra_id)
-    except ClientError as err:
-        if err.response["Error"]["Code"] != "TransactionCanceledException":
+    # Si otra transacción toca el mismo evento al mismo tiempo, DynamoDB cancela con
+    # TransactionConflict: se reintenta con espera exponencial y jitter. Los reintentos no
+    # usan ClientRequestToken; la idempotencia la siguen garantizando los IDs deterministas.
+    for intento in range(REINTENTOS_CONFLICTO):
+        try:
+            kwargs = {"ClientRequestToken": compra_id} if intento == 0 else {}
+            aws.client("dynamodb").transact_write_items(TransactItems=acciones, **kwargs)
+            break
+        except ClientError as err:
+            if err.response["Error"]["Code"] != "TransactionCanceledException":
+                raise
+            razones = [r.get("Code") for r in err.response.get("CancellationReasons", [])]
+            if any(r == "ConditionalCheckFailed" for r in razones[1:]):
+                # Los boletos ya existen: es un reintento de la misma compra.
+                existentes = _boletos_de_compra(compra_id, cantidad)
+                if existentes:
+                    return respond(200, {"compra_id": compra_id, "boletos": existentes, "reintento": True})
+            if razones and razones[0] == "ConditionalCheckFailed":
+                metrica("ComprasRechazadasPorCupo", evento_id=evento["evento_id"])
+                actual = db.tabla_eventos().get_item(Key={"evento_id": evento["evento_id"]}).get("Item") or evento
+                disponibles = max(cupo - int(actual.get("vendidos", 0)), 0)
+                raise ApiError(409, "No hay lugares suficientes", {"disponibles": disponibles}) from err
+            if "TransactionConflict" in razones and intento < REINTENTOS_CONFLICTO - 1:
+                metrica("ConflictosDeCompra", evento_id=evento["evento_id"])
+                time.sleep(random.uniform(0, 0.05 * 2 ** intento))
+                continue
+            if "TransactionConflict" in razones:
+                raise ApiError(503, "Mucha demanda en este momento, intenta de nuevo") from err
             raise
-        razones = [r.get("Code") for r in err.response.get("CancellationReasons", [])]
-        if any(r == "ConditionalCheckFailed" for r in razones[1:]):
-            # Los boletos ya existen: es un reintento de la misma compra.
-            existentes = _boletos_de_compra(compra_id, cantidad)
-            if existentes:
-                return respond(200, {"compra_id": compra_id, "boletos": existentes, "reintento": True})
-        if razones and razones[0] == "ConditionalCheckFailed":
-            metrica("ComprasRechazadasPorCupo", evento_id=evento["evento_id"])
-            disponibles = max(cupo - int(evento.get("vendidos", 0)), 0)
-            raise ApiError(409, "No hay lugares suficientes", {"disponibles": disponibles}) from err
-        raise
 
     # La generación del PDF es asíncrona: un mensaje por boleto a la cola.
     aws.client("sqs").send_message_batch(
