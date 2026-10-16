@@ -73,3 +73,4 @@ button.secundario { background: #fff; color: var(--texto); border: 1px solid var
 .lector { width: 100%; margin: 12px 0; border-radius: 12px; overflow: hidden; }
 .lector.activo { min-height: 260px; background: #000; }
 .form.manual { margin-top: 20px; }
+.boton.foto { cursor: pointer; text-align: center; margin-top: 0; flex: 1; padding: 10px 16px; }

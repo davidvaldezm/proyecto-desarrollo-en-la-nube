@@ -34,7 +34,7 @@ variable "alert_email" {
 }
 
 variable "habilitar_cloudfront" {
-  description = "Sirve el frontend por HTTPS con CloudFront (necesario para usar la cámara en el check-in)"
+  description = "Sirve el frontend por HTTPS con CloudFront. AWS Academy no permite cloudfront:CreateDistribution, por eso está apagado."
   type        = bool
-  default     = true
+  default     = false
 }

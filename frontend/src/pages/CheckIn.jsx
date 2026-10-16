@@ -46,6 +46,23 @@ export default function CheckIn() {
     }
   }
 
+  // Respaldo para sitios HTTP (el navegador no da la cámara en vivo sin HTTPS):
+  // en el celular, el input con capture abre la app de cámara y se decodifica la foto.
+  async function leerFoto(e) {
+    const archivo = e.target.files?.[0]
+    e.target.value = ''
+    if (!archivo) return
+    setError('')
+    try {
+      const lector = new Html5Qrcode('lector-foto')
+      const texto = await lector.scanFile(archivo, false)
+      ultimo.current = { qr: '', t: 0 }
+      validar(texto)
+    } catch {
+      setError('No se encontró un código QR en la foto. Intenta de nuevo más cerca y con buena luz.')
+    }
+  }
+
   async function detenerCamara() {
     await scanner.current?.stop().catch(() => {})
     setCamara(false)
@@ -78,9 +95,18 @@ export default function CheckIn() {
       {error && <p className="alerta error">{error}</p>}
 
       <div id="lector-qr" className={camara ? 'lector activo' : 'lector'} />
-      {listo && (camara
-        ? <button className="secundario" onClick={detenerCamara}>Detener cámara</button>
-        : <button onClick={iniciarCamara}>Escanear con la cámara</button>)}
+      <div id="lector-foto" hidden />
+      {listo && (
+        <div className="fila">
+          <label className="boton foto">
+            Tomar foto del QR
+            <input type="file" accept="image/*" capture="environment" onChange={leerFoto} hidden />
+          </label>
+          {window.isSecureContext && (camara
+            ? <button className="secundario" onClick={detenerCamara}>Detener cámara</button>
+            : <button onClick={iniciarCamara}>Cámara en vivo</button>)}
+        </div>
+      )}
 
       <form className="form manual" onSubmit={(e) => { e.preventDefault(); validar(manual.trim()) }}>
         <label>Captura manual del código
