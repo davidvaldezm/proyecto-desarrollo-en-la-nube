@@ -26,5 +26,23 @@ export const api = {
   obtenerEvento: (id) => request('GET', `/eventos/${encodeURIComponent(id)}`),
   crearEvento: (evento) => request('POST', '/eventos', evento),
   comprar: (compra) => request('POST', '/compras', compra), // Flujo 1
+  misBoletos: (email) => request('GET', `/boletos?email=${encodeURIComponent(email)}`), // Flujo 1
   checkin: (datos) => request('POST', '/checkin', datos), // Flujo 2
+}
+
+// UUID v4 para la llave de idempotencia de la compra. crypto.randomUUID solo existe en HTTPS,
+// así que hay respaldo con getRandomValues (disponible también en HTTP).
+export function nuevoId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  const b = window.crypto.getRandomValues(new Uint8Array(16))
+  b[6] = (b[6] & 0x0f) | 0x40
+  b[8] = (b[8] & 0x3f) | 0x80
+  const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`
+}
+
+// Recordar el correo del comprador en este navegador (opcional; puede no estar disponible).
+export const correoGuardado = {
+  leer: () => { try { return localStorage.getItem('paseqr-email') || '' } catch { return '' } },
+  guardar: (e) => { try { localStorage.setItem('paseqr-email', e) } catch { /* sin almacenamiento */ } },
 }
