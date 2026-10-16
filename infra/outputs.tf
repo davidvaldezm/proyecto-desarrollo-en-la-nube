@@ -14,11 +14,11 @@ output "frontend_s3_url" {
 }
 
 output "frontend_bucket" {
-  value = aws_s3_bucket.frontend.bucket
+  value = data.aws_s3_bucket.frontend.bucket
 }
 
 output "boletos_bucket" {
-  value = aws_s3_bucket.boletos.bucket
+  value = data.aws_s3_bucket.boletos.bucket
 }
 
 output "cola_emision_url" {

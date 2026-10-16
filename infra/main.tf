@@ -58,14 +58,30 @@ resource "aws_dynamodb_table" "boletos" {
 }
 
 # ---------------------------------------------------------------- S3
+# AWS Academy bloquea s3:GetBucketObjectLockConfiguration (política SCP), que el recurso
+# aws_s3_bucket consulta al leer el bucket. Por eso los buckets los crea scripts/deploy.sh
+# con la CLI y Terraform solo los referencia (data) y configura.
+removed {
+  from = aws_s3_bucket.boletos
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = aws_s3_bucket.frontend
+  lifecycle {
+    destroy = false
+  }
+}
+
 # Boletos PDF y reportes CSV: privado, se descarga con URLs prefirmadas.
-resource "aws_s3_bucket" "boletos" {
-  bucket        = "${local.prefix}-boletos-${local.account_id}"
-  force_destroy = true
+data "aws_s3_bucket" "boletos" {
+  bucket = "${local.prefix}-boletos-${local.account_id}"
 }
 
 resource "aws_s3_bucket_public_access_block" "boletos" {
-  bucket                  = aws_s3_bucket.boletos.id
+  bucket                  = data.aws_s3_bucket.boletos.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -73,7 +89,7 @@ resource "aws_s3_bucket_public_access_block" "boletos" {
 }
 
 resource "aws_s3_bucket_cors_configuration" "boletos" {
-  bucket = aws_s3_bucket.boletos.id
+  bucket = data.aws_s3_bucket.boletos.id
   cors_rule {
     allowed_methods = ["GET"]
     allowed_origins = ["*"]
@@ -81,13 +97,12 @@ resource "aws_s3_bucket_cors_configuration" "boletos" {
 }
 
 # Frontend: sitio estático público.
-resource "aws_s3_bucket" "frontend" {
-  bucket        = "${local.prefix}-web-${local.account_id}"
-  force_destroy = true
+data "aws_s3_bucket" "frontend" {
+  bucket = "${local.prefix}-web-${local.account_id}"
 }
 
 resource "aws_s3_bucket_website_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  bucket = data.aws_s3_bucket.frontend.id
   index_document {
     suffix = "index.html"
   }
@@ -97,7 +112,7 @@ resource "aws_s3_bucket_website_configuration" "frontend" {
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket                  = aws_s3_bucket.frontend.id
+  bucket                  = data.aws_s3_bucket.frontend.id
   block_public_acls       = true
   ignore_public_acls      = true
   block_public_policy     = false
@@ -105,7 +120,7 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
 }
 
 resource "aws_s3_bucket_policy" "frontend" {
-  bucket     = aws_s3_bucket.frontend.id
+  bucket     = data.aws_s3_bucket.frontend.id
   depends_on = [aws_s3_bucket_public_access_block.frontend]
 
   policy = jsonencode({
@@ -115,7 +130,7 @@ resource "aws_s3_bucket_policy" "frontend" {
       Effect    = "Allow"
       Principal = "*"
       Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.frontend.arn}/*"
+      Resource  = "${data.aws_s3_bucket.frontend.arn}/*"
     }]
   })
 }

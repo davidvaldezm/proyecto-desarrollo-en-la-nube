@@ -13,6 +13,18 @@ aws sts get-caller-identity --output table
 echo "==> Bucket de estado"
 STATE_BUCKET="$("$ROOT/scripts/bootstrap.sh" | tail -n 1)"
 
+echo "==> Buckets de la aplicación (se crean con la CLI por la restricción de AWS Academy)"
+ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+for nombre in boletos web; do
+  BUCKET="paseqr-${STAGE}-${nombre}-${ACCOUNT}"
+  if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+    echo "  ya existe: $BUCKET"
+  else
+    aws s3api create-bucket --bucket "$BUCKET" --region "$AWS_REGION" >/dev/null
+    echo "  creado: $BUCKET"
+  fi
+done
+
 echo "==> Empaquetando backend"
 "$ROOT/scripts/build_backend.sh"
 

@@ -9,7 +9,7 @@ locals {
   lambda_env = {
     TABLA_EVENTOS         = aws_dynamodb_table.eventos.name
     TABLA_BOLETOS         = aws_dynamodb_table.boletos.name
-    BUCKET_BOLETOS        = aws_s3_bucket.boletos.bucket
+    BUCKET_BOLETOS        = data.aws_s3_bucket.boletos.bucket
     COLA_EMISION_URL      = aws_sqs_queue.emision.url
     TOPICO_NOTIFICACIONES = aws_sns_topic.notificaciones.arn
     SECRETO_QR_ARN        = aws_secretsmanager_secret.qr_key.arn
