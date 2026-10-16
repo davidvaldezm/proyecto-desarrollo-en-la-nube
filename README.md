@@ -8,6 +8,7 @@ Proyecto Integrador · Desarrollo en la Nube · Otoño 2026 · ITESO (Prof. Marc
 
 - Sitio: http://paseqr-dev-web-901501251693.s3-website-us-east-1.amazonaws.com
 - API: https://p3vllywmbf.execute-api.us-east-1.amazonaws.com
+- Video de avances (Fase 2): https://youtu.be/R3J9fsPNys8
 - Reporte de la Fase 2: [docs/reportes/Fase2_PaseQR.pdf](docs/reportes/Fase2_PaseQR.pdf)
 
 ## Problema
