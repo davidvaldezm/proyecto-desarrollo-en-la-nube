@@ -6,17 +6,21 @@ Rutas (API Gateway HTTP API):
   GET  /eventos/{evento_id}   detalle de un evento
 """
 import hashlib
+import logging
 import uuid
 from datetime import datetime, timezone
 
-from paseqr.common import db
+from botocore.exceptions import ClientError
+
+from paseqr.common import aws, db
 from paseqr.common.http import ApiError, api_handler, parse_json_body, path_param, respond
 from paseqr.common.validation import Validador
 
 CAMPOS_PUBLICOS = (
     "evento_id", "nombre", "descripcion", "lugar", "fecha_inicio",
-    "cupo", "vendidos", "precio", "estado", "creado_en",
+    "cupo", "vendidos", "asistentes", "precio", "estado", "creado_en",
 )
+logger = logging.getLogger()
 
 
 def hash_pin(evento_id: str, pin: str) -> str:
@@ -49,10 +53,15 @@ def crear_evento(event):
         "evento_id": evento_id,
         "pin_hash": hash_pin(evento_id, pin),
         "vendidos": 0,
+        "asistentes": 0,
         "estado": "A_LA_VENTA",
         "creado_en": datetime.now(timezone.utc).isoformat(),
     }
     db.tabla_eventos().put_item(Item=item, ConditionExpression="attribute_not_exists(evento_id)")
+    try:  # para que el organizador reciba el reporte de asistencia (Flujo 3)
+        aws.suscribir_correo(item["organizador_email"])
+    except (ClientError, RuntimeError):
+        logger.warning("No se pudo suscribir al organizador", exc_info=True)
     return respond(201, publico(item))
 
 
