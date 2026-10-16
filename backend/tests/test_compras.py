@@ -1,6 +1,5 @@
 import json
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 
@@ -47,12 +46,31 @@ def test_compra_mayor_al_cupo_restante(aws):
     assert vendidos(ev["evento_id"]) == 2
 
 
-def test_compras_concurrentes_no_exceden_cupo(aws):
+def test_lectura_desactualizada_no_provoca_sobreventa(aws, monkeypatch):
+    """Simula la condición de carrera: dos Lambdas leen el evento cuando queda 1 lugar
+    y ambas intentan comprar. La condición se evalúa al escribir, así que solo una pasa.
+    (moto no es seguro con hilos, por eso se simula el entrelazado en lugar de usar threads;
+    en DynamoDB real las escrituras condicionales son atómicas.)"""
     ev = crear_evento(cupo=5)
-    with ThreadPoolExecutor(max_workers=10) as pool:
-        resultados = list(pool.map(lambda _: comprar(ev["evento_id"])[0], range(20)))
-    assert resultados.count(202) == 5
-    assert resultados.count(409) == 15
+    comprar(ev["evento_id"], cantidad=4)
+    snapshot = db.tabla_eventos().get_item(Key={"evento_id": ev["evento_id"]})["Item"]  # vendidos = 4
+
+    tabla_real = db.tabla_eventos
+
+    class TablaConLecturaVieja:
+        def __init__(self):
+            self._t = tabla_real()
+
+        def get_item(self, **_kw):
+            return {"Item": dict(snapshot)}
+
+        def __getattr__(self, nombre):
+            return getattr(self._t, nombre)
+
+    monkeypatch.setattr(db, "tabla_eventos", TablaConLecturaVieja)
+    resultados = [comprar(ev["evento_id"])[0] for _ in range(3)]
+    assert resultados == [202, 409, 409]
+    monkeypatch.setattr(db, "tabla_eventos", tabla_real)
     assert vendidos(ev["evento_id"]) == 5
 
 

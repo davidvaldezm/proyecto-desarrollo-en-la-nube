@@ -1,6 +1,5 @@
 import json
 import uuid
-from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
@@ -57,12 +56,11 @@ def test_pin_incorrecto(boleto):
     assert escanear(evento_id, codigo, pin="0000")[0] == 403
 
 
-def test_escaneos_simultaneos_solo_uno_entra(boleto):
+def test_tercer_escaneo_sigue_rechazado_y_cuenta_una_vez(boleto):
     evento_id, codigo = boleto
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        resultados = [r["resultado"] for _, r in pool.map(lambda _: escanear(evento_id, codigo), range(8))]
-    assert resultados.count("VALIDO") == 1
-    assert resultados.count("YA_USADO") == 7
+    resultados = [escanear(evento_id, codigo)[1] for _ in range(3)]
+    assert [r["resultado"] for r in resultados] == ["VALIDO", "YA_USADO", "YA_USADO"]
+    assert resultados[-1]["asistentes"] == 1
 
 
 def test_firma_round_trip(aws):
