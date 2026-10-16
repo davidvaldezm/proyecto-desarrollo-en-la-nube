@@ -4,6 +4,12 @@ Proyecto Integrador · Desarrollo en la Nube · Otoño 2026 · ITESO (Prof. Marc
 
 **PaseQR** es una plataforma serverless en AWS para que organizadores de eventos pequeños y medianos (conciertos universitarios, conferencias, torneos, fiestas) vendan o registren boletos, los entreguen como **PDF con código QR firmado** y validen la entrada en la puerta desde cualquier celular, sin sobreventa ni boletos duplicados.
 
+## Demo en AWS
+
+- Sitio: http://paseqr-dev-web-901501251693.s3-website-us-east-1.amazonaws.com
+- API: https://p3vllywmbf.execute-api.us-east-1.amazonaws.com
+- Reporte de la Fase 2: [docs/reportes/Fase2_PaseQR.pdf](docs/reportes/Fase2_PaseQR.pdf)
+
 ## Problema
 
 Muchos eventos se organizan con hojas de cálculo, transferencias y listas impresas. Eso provoca sobreventa, boletos falsificados o reutilizados (una captura de pantalla se puede compartir), filas lentas en la entrada y cero datos de asistencia al final. La demanda llega en picos (apertura de preventa, hora de entrada) y el resto del tiempo es casi nula, por eso una arquitectura serverless en la nube es la opción adecuada.
