@@ -1,0 +1,46 @@
+{
+  "widgets": [
+    { "type": "text", "x": 0, "y": 0, "width": 24, "height": 2,
+      "properties": { "markdown": "# PaseQR — estado del sistema (${stage})\nVentas y check-ins (métricas propias EMF), salud de la API, Lambdas y cola de emisión." } },
+    { "type": "alarm", "x": 0, "y": 2, "width": 24, "height": 2,
+      "properties": { "title": "Alarmas", "alarms": ${jsonencode(alarmas)} } },
+    { "type": "metric", "x": 0, "y": 4, "width": 8, "height": 6,
+      "properties": { "title": "1. Ventas (boletos)", "region": "${region}", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["${ns}", "BoletosVendidos", { "label": "Vendidos" }],
+          ["${ns}", "BoletosEmitidos", { "label": "PDF emitidos" }],
+          ["${ns}", "ComprasRechazadasPorCupo", { "label": "Rechazadas (sin cupo)" }]
+        ] } },
+    { "type": "metric", "x": 8, "y": 4, "width": 8, "height": 6,
+      "properties": { "title": "2. Check-ins", "region": "${region}", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["${ns}", "CheckInsValidos", { "label": "Válidos" }],
+          ["${ns}", "CheckInsRechazados", "resultado", "YA_USADO", { "label": "Ya usado" }],
+          ["${ns}", "CheckInsRechazados", "resultado", "INVALIDO", { "label": "QR inválido" }],
+          ["${ns}", "CheckInsRechazados", "resultado", "OTRO_EVENTO", { "label": "Otro evento" }]
+        ] } },
+    { "type": "metric", "x": 16, "y": 4, "width": 8, "height": 6,
+      "properties": { "title": "3. Errores de Lambda", "region": "${region}", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": ${jsonencode([for k, nombre in funciones : ["AWS/Lambda", "Errors", "FunctionName", nombre, { label = k }]])} } },
+    { "type": "metric", "x": 0, "y": 10, "width": 8, "height": 6,
+      "properties": { "title": "4. Latencia de la API (ms)", "region": "${region}", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ApiGateway", "Latency", "ApiId", "${api_id}", { "stat": "p95", "label": "p95" }],
+          ["AWS/ApiGateway", "Latency", "ApiId", "${api_id}", { "stat": "p50", "label": "p50" }]
+        ] } },
+    { "type": "metric", "x": 8, "y": 10, "width": 8, "height": 6,
+      "properties": { "title": "5. Cola de emisión", "region": "${region}", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/SQS", "ApproximateAgeOfOldestMessage", "QueueName", "${cola}", { "stat": "Maximum", "label": "Antigüedad del mensaje más viejo (s)" }],
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${cola}", { "stat": "Maximum", "label": "En cola" }],
+          ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${dlq}", { "stat": "Maximum", "label": "En DLQ" }]
+        ] } },
+    { "type": "metric", "x": 16, "y": 10, "width": 8, "height": 6,
+      "properties": { "title": "API: peticiones y errores", "region": "${region}", "stat": "Sum", "period": 60, "view": "timeSeries",
+        "metrics": [
+          ["AWS/ApiGateway", "Count", "ApiId", "${api_id}", { "label": "Peticiones" }],
+          ["AWS/ApiGateway", "4xx", "ApiId", "${api_id}", { "label": "4xx" }],
+          ["AWS/ApiGateway", "5xx", "ApiId", "${api_id}", { "label": "5xx" }]
+        ] } }
+  ]
+}

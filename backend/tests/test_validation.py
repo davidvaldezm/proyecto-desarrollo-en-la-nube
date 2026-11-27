@@ -34,3 +34,12 @@ def test_fecha_sin_zona_horaria():
 
 def test_texto_opcional_ausente_no_falla():
     assert Validador({}).texto("d", requerido=False).resultado() == {}
+
+
+def test_metricas_emf_se_publican_agregadas(capsys):
+    import json
+    from paseqr.common.metrics import metrica
+    metrica("CheckInsRechazados", evento_id="e1", resultado="YA_USADO")
+    emf = json.loads(capsys.readouterr().out)
+    assert emf["_aws"]["CloudWatchMetrics"][0]["Dimensions"] == [[], ["resultado"], ["evento_id", "resultado"]]
+    assert emf["CheckInsRechazados"] == 1 and emf["resultado"] == "YA_USADO"

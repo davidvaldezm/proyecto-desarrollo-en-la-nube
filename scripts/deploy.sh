@@ -48,11 +48,16 @@ aws s3 sync dist "s3://${WEB_BUCKET}" --delete --exclude index.html \
 # index.html sin caché para que CloudFront siempre sirva la versión más reciente
 aws s3 cp dist/index.html "s3://${WEB_BUCKET}/index.html" --cache-control "no-cache" --content-type "text/html"
 
+echo "==> Prueba de humo y datos de demo"
+python3 "$ROOT/scripts/seed_demo.py" "$API_URL"
+DASHBOARD="https://${AWS_REGION}.console.aws.amazon.com/cloudwatch/home?region=${AWS_REGION}#dashboards/dashboard/paseqr-${STAGE}-estado"
+
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
-  echo "::notice title=URLs de PaseQR::API ${API_URL} | Frontend ${WEB_URL}"
+  echo "::notice title=URLs de PaseQR::API ${API_URL} | Frontend ${WEB_URL} | Dashboard ${DASHBOARD}"
 fi
 
 echo ""
 echo "Listo:"
 echo "  API:      $API_URL"
 echo "  Frontend: $WEB_URL"
+echo "  Dashboard: $DASHBOARD"
