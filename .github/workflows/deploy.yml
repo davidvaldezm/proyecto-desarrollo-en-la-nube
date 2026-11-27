@@ -64,6 +64,10 @@ jobs:
           terraform_wrapper: false
 
       - name: Desplegar
+        env:
+          # Correo que recibe las alarmas de CloudWatch y es organizador de los eventos demo (opcional)
+          TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+          DEMO_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
           set -o pipefail
           ./scripts/deploy.sh dev 2>&1 | tee deploy.log

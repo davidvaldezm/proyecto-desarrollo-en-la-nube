@@ -151,3 +151,11 @@ def test_conflicto_de_transaccion_se_reintenta(aws, monkeypatch):
     assert status == 202 and fallas["n"] == 0
     monkeypatch.setattr(aws_mod, "client", real)
     assert vendidos(ev["evento_id"]) == 1
+
+
+def test_mensaje_corrupto_se_reporta_para_reintento(aws):
+    """Un mensaje que no se puede procesar vuelve a la cola y, tras 3 intentos, va a la DLQ
+    (alarma B del monitoreo)."""
+    from paseqr.handlers import generar_boleto
+    r = generar_boleto.handler({"Records": [{"messageId": "m1", "body": "roto"}]}, None)
+    assert r == {"batchItemFailures": [{"itemIdentifier": "m1"}]}

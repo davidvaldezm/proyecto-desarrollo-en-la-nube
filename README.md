@@ -53,7 +53,7 @@ scripts/                 # bootstrap, build y deploy
 docs/                    # diagramas y reportes
 ```
 
-## Estado actual (Fase 2)
+## Estado actual (Fase 3)
 
 | Componente | Estado | Responsable |
 |------------|--------|-------------|
@@ -64,8 +64,8 @@ docs/                    # diagramas y reportes
 | Flujo 3: recordatorio 24 h antes y reporte CSV de asistencia (EventBridge cada hora) | Listo | Juan Pablo |
 | CI/CD con GitHub Actions (pytest, build, terraform validate, deploy a `main`) | Listo | Vittorio |
 | Métricas personalizadas (EMF): BoletosVendidos, BoletosEmitidos, CheckInsValidos/Rechazados, ComprasRechazadasPorCupo | Listo | Juan Pablo |
-| Alarmas y dashboard de CloudWatch | Pendiente (Fase 3) | Juan Pablo |
-| Pruebas de carga con compras concurrentes contra AWS | Pendiente | David |
+| Monitoreo: 5 métricas, 2 alarmas (5xx > 5 %, DLQ > 0) y dashboard `paseqr-dev-estado` en Terraform | Listo | Juan Pablo |
+| Prueba de carga (`scripts/prueba_carga.py`) y prueba de humo + datos demo en cada deploy (`scripts/seed_demo.py`) | Listo | David / Vittorio |
 
 ### API
 

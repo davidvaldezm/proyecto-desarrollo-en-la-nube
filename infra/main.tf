@@ -61,19 +61,6 @@ resource "aws_dynamodb_table" "boletos" {
 # AWS Academy bloquea s3:GetBucketObjectLockConfiguration (política SCP), que el recurso
 # aws_s3_bucket consulta al leer el bucket. Por eso los buckets los crea scripts/deploy.sh
 # con la CLI y Terraform solo los referencia (data) y configura.
-removed {
-  from = aws_s3_bucket.boletos
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = aws_s3_bucket.frontend
-  lifecycle {
-    destroy = false
-  }
-}
 
 # Boletos PDF y reportes CSV: privado, se descarga con URLs prefirmadas.
 data "aws_s3_bucket" "boletos" {
@@ -143,7 +130,7 @@ resource "aws_sqs_queue" "emision_dlq" {
 
 resource "aws_sqs_queue" "emision" {
   name                       = "${local.prefix}-emision"
-  visibility_timeout_seconds = 180 # AWS recomienda 6x el timeout de la Lambda consumidora (30 s)
+  visibility_timeout_seconds = 60 # >= timeout de generar-boleto (30 s); un mensaje fallido llega a la DLQ en ~3 min
 
   redrive_policy = jsonencode({
     deadLetterTargetArn = aws_sqs_queue.emision_dlq.arn
